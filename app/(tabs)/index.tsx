@@ -1,59 +1,229 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import { Button, Text, Pressable, StyleSheet, View } from "react-native";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+import { HelloWave } from "@/components/HelloWave";
+import ParallaxScrollView from "@/components/ParallaxScrollView";
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
+import { useEffect, useState } from "react";
+import { Audio, InterruptionModeAndroid, InterruptionModeIOS } from "expo-av";
 
 export default function HomeScreen() {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [sound, setSound] = useState<Audio.Sound | null>(null);
+  const url = "https://4z2wwbvd-8000.brs.devtunnels.ms/0.m3u8";
+  // "http://127.0.0.1:8000/0.m3u8";
+  // "https://github.com/rafaelreis-hotmart/Audio-Sample-files/raw/master/sample.mp3";
+
+  async function playSound() {
+    try {
+      console.log("Loading Sound");
+      await Audio.setAudioModeAsync({
+        staysActiveInBackground: true,
+        playsInSilentModeIOS: true,
+        interruptionModeIOS: InterruptionModeIOS.DuckOthers,
+        interruptionModeAndroid: InterruptionModeAndroid.DuckOthers,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: true,
+      });
+      const { sound } = await Audio.Sound.createAsync(
+        { uri: url },
+        { shouldPlay: true }
+      );
+      setSound(sound);
+
+      console.log("Playing Sound");
+      await sound.playAsync();
+    } catch (error) {
+      console.log(error);
+    }
+  }
+
+  const resume = async () => {
+    if (sound) {
+      await sound.playAsync();
+      setIsPlaying(true);
+    }
+  };
+
+  const foward = async () => {
+    if (sound) {
+      const status = await sound.getStatusAsync();
+      console.log(status.positionMillis);
+      await sound.setPositionAsync(status.positionMillis + 11000);
+    }
+  };
+
+  const backward = async () => {
+    if (sound) {
+      const status = await sound.getStatusAsync();
+      console.log(status.positionMillis);
+      await sound.setPositionAsync(status.positionMillis - 11000);
+    }
+  };
+
+  const getStatus = async () => {
+    if (sound) {
+      const status = await sound.getStatusAsync();
+      console.log(status);
+    }
+  };
+
+  const sendPostBackground = async () => {
+    try {
+      const response = await fetch("https://4z2wwbvd-8000.brs.devtunnels.ms/", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ key: "hola nawe" }),
+      });
+      const data = await response.json();
+
+      console.log(data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  let interval = setInterval(() => {
+    sendPostBackground();
+  }, 1000);
+
+  useEffect(() => {
+    return sound
+      ? () => {
+          console.log("Unloading Sound");
+          setIsPlaying(false);
+          sound.unloadAsync();
+          setSound(null);
+        }
+      : undefined;
+  }, [sound]);
+  const pause = async () => {
+    if (sound) {
+      await sound.pauseAsync();
+      setIsPlaying(false);
+      // sound.unloadAsync();
+    }
+  };
+  const stop = async () => {
+    if (sound) {
+      await sound.stopAsync();
+      setSound(null);
+      setIsPlaying(false);
+      // sound.unloadAsync();
+    }
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({ ios: 'cmd + d', android: 'cmd + m' })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <View
+      style={{
+        flex: 1,
+
+        alignItems: "center",
+        justifyContent: "center",
+      }}
+    >
+      <Pressable
+        style={{
+          height: 54,
+          width: 60,
+          backgroundColor: "green",
+          marginBottom: 20,
+        }}
+        onPress={playSound}
+      >
+        <Text>play</Text>
+      </Pressable>
+      <Pressable
+        style={{
+          height: 54,
+          width: 60,
+          backgroundColor: "green",
+          marginBottom: 20,
+        }}
+        onPress={resume}
+      >
+        <Text>resume</Text>
+      </Pressable>
+      <Pressable
+        style={{
+          height: 54,
+          width: 60,
+          backgroundColor: "green",
+          marginBottom: 20,
+        }}
+        onPress={stop}
+      >
+        <Text>stop</Text>
+      </Pressable>
+      <Pressable
+        style={{
+          height: 54,
+          width: 60,
+          backgroundColor: "green",
+          marginBottom: 20,
+        }}
+        onPress={pause}
+      >
+        <Text>pause</Text>
+      </Pressable>
+      <Pressable
+        style={{
+          height: 54,
+          width: 60,
+          backgroundColor: "green",
+          marginBottom: 20,
+        }}
+        onPress={foward}
+      >
+        <Text>foward</Text>
+      </Pressable>
+      <Pressable
+        style={{
+          height: 54,
+          width: 60,
+          backgroundColor: "green",
+          marginBottom: 20,
+        }}
+        onPress={backward}
+      >
+        <Text>backward</Text>
+      </Pressable>
+      <Pressable
+        style={{
+          height: 54,
+          width: 60,
+          backgroundColor: "green",
+          marginBottom: 20,
+        }}
+        onPress={getStatus}
+      >
+        <Text>status</Text>
+      </Pressable>
+
+      <Pressable
+        style={{
+          height: 54,
+          width: 60,
+          backgroundColor: "green",
+          marginBottom: 20,
+        }}
+        onPress={() => {
+          clearInterval(interval);
+        }}
+        // onPress={sendPostBackground}
+      >
+        <Text>stop interval</Text>
+      </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   stepContainer: {
@@ -65,6 +235,6 @@ const styles = StyleSheet.create({
     width: 290,
     bottom: 0,
     left: 0,
-    position: 'absolute',
+    position: "absolute",
   },
 });
